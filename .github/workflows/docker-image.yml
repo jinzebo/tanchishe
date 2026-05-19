@@ -1,35 +1,55 @@
-name: Build & Push Docker Image
+nname: Build and Deploy to Azure
 
+# 触发条件：当 main 分支有代码 push 时触发
 on:
   push:
     branches:
       - main
 
-env:
-  IMAGE_NAME: tanchishe  # 👈 改成你的项目名
-
 jobs:
-  build-and-push:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ 拉代码
-      - name: Checkout code
-        uses: actions/checkout@v4
+    # 1. 检出本地代码
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      # 2️⃣ 登录 Docker Hub
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+    # 2. 设置 Docker Buildx（用来加速打包）
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
 
-      # 3️⃣ 构建镜像
-      - name: Build Docker image
-        run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest .
+    # 3. 登录到 Azure ACR 私有仓库
+    - name: Log in to Azure Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ secrets.ACR_LOGIN_SERVER }}
+        username: ${{ secrets.ACR_USERNAME }}
+        password: ${{ secrets.ACR_PASSWORD }}
 
-      # 4️⃣ 推送镜像
-      - name: Push Docker image
-        run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+    # 4. 打包并推送到 Azure ACR
+    - name: Build and push image to ACR
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: true
+        # 标签打上两个：一个是latest，一个是当前Commit的哈希值（实现精确版本控制）
+        tags: |
+          ${{ secrets.ACR_LOGIN_SERVER }}/myapp:latest
+          ${{ secrets.ACR_LOGIN_SERVER }}/myapp:${{ github.sha }}
+
+    # 5. 登录 Azure 账号（为了操作 ACA）
+    - name: Log in to Azure
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    # 6. 把 ACR 里的新镜像发布到 Azure Container Apps (ACA)
+    - name: Deploy to Azure Container Apps
+      uses: azure/container-apps-deploy-action@v1
+      with:
+        acrName: ${{ secrets.ACR_USERNAME }}
+        resourceGroup: tanchishe      # ⚠️ 换成你的资源组名字
+        containerAppName: tanchishe     # ⚠️ 换成你的ACA应用名字
+        imageToDeploy: ${{ secrets.ACR_LOGIN_SERVER }}/myapp:${{ github.sha }}
