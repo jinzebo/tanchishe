@@ -1,4 +1,4 @@
-nname: Build and Deploy to Azure
+name: Build and Deploy to Azure
 
 # 触发条件：当 main 分支有代码 push 时触发
 on:
