@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Azure 多人联机贪吃蛇</title>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Arial', sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      color: #fff;
+    }
+
+    .game-container {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    #game {
+      border: 3px solid #00ffcc;
+      border-radius: 8px;
+      background: #0f0f23;
+      box-shadow: 0 0 20px rgba(0, 255, 204, 0.3);
+    }
+
+    .info-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      width: 280px;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 20px;
+      border-radius: 8px;
+      border: 1px solid #00ffcc;
+      box-shadow: 0 0 15px rgba(0, 255, 204, 0.2);
+    }
+
+    .nickname-input {
+      display: flex;
+      gap: 10px;
+    }
+
+    #nickname {
+      flex: 1;
+      padding: 8px 12px;
+      border: 2px solid #00ffcc;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      outline: none;
+    }
+
+    #nickname::placeholder {
+      color: #999;
+    }
+
+    #setNicknameBtn {
+      padding: 8px 16px;
+      background: #00ffcc;
+      color: #1a1a2e;
+      border: none;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    #setNicknameBtn:hover {
+      background: #00e6b8;
+    }
+
+    #restartBtn {
+      padding: 10px 0;
+      background: #ffd700;
+      color: #1a1a2e;
+      border: none;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    #restartBtn.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    #restartBtn:hover {
+      background: #ffc107;
+    }
+
+    /* 新增：暂停按钮 */
+    #pauseBtn {
+      padding: 10px 0;
+      background: #00ffcc;
+      color: #1a1a2e;
+      border: none;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    #pauseBtn:hover {
+      background: #00e6b8;
+    }
+
+    .panel-title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #00ffcc;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .scoreboard, .leaderboard {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .score-item, .leaderboard-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+
+    .score-item:hover, .leaderboard-item:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .snake-color {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+
+    .nickname {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .score, .high-score {
+      font-weight: bold;
+      color: #ffd700;
+    }
+
+    .dead-tag {
+      color: #ff4444;
+      font-size: 12px;
+      margin-left: 10px;
+    }
+
+    .rank {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #00ffcc;
+      color: #1a1a2e;
+      font-size: 12px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 10px;
+    }
+
+    .control-tip {
+      margin-top: 20px;
+      text-align: center;
+      color: #ccc;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .mobile-controls {
+      display: none;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      width: 300px;
+      margin-top: 20px;
+    }
+
+    .mobile-btn {
+      padding: 15px 0;
+      background: rgba(0, 0, 0, 0.5);
+      border: 2px solid #00ffcc;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 18px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .mobile-btn:hover,
+    .mobile-btn:active {
+      background: rgba(0, 255, 204, 0.3);
+    }
+
+    @media (max-width: 768px) {
+      .game-container {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .info-panel {
+        width: 100%;
+        max-width: 400px;
+      }
+
+      .mobile-controls {
+        display: grid;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1 style="margin-bottom: 20px; color: #00ffcc; text-shadow: 0 0 10px rgba(0,255,204,0.5);">
+    Azure 多人联机贪吃蛇
+  </h1>
+
+  <div class="game-container">
+
+    <canvas id="game" width="800" height="800"></canvas>
+
+    <div class="info-panel">
+
+      <div class="nickname-input">
+        <input type="text" id="nickname" placeholder="输入你的昵称（8字内）">
+        <button id="setNicknameBtn">确认</button>
+      </div>
+
+      <button id="restartBtn">重新开始游戏</button>
+
+      <!-- 新增：暂停按钮 -->
+      <button id="pauseBtn">暂停游戏</button>
+
+      <!-- 新增：调速 -->
+      <div>
+        <div class="panel-title">蛇速调节</div>
+
+        <input
+          type="range"
+          id="speedControl"
+          min="1"
+          max="5"
+          value="2"
+          style="width:100%;"
+        >
+
+        <div
+          id="speedText"
+          style="text-align:center;margin-top:8px;color:#ffd700;"
+        >
+          当前速度：2
+        </div>
+      </div>
+
+      <div>
+        <div class="panel-title">实时计分板</div>
+
+        <div class="scoreboard" id="scoreboard"></div>
+      </div>
+
+      <div>
+        <div class="panel-title">分数排行榜（历史最高）</div>
+
+        <div class="leaderboard" id="leaderboard"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="control-tip">
+    PC端：方向键移动 ｜ 空格暂停 ｜ 数字1~5调速 ｜ 死亡后点击重新开始
+  </div>
+
+  <div class="mobile-controls">
+    <button class="mobile-btn" style="grid-column: 2;" onclick="controlSnake('up')">↑</button>
+    <button class="mobile-btn" style="grid-column: 1;" onclick="controlSnake('left')">←</button>
+    <button class="mobile-btn" style="grid-column: 2;" onclick="controlSnake('down')">↓</button>
+    <button class="mobile-btn" style="grid-column: 3;" onclick="controlSnake('right')">→</button>
+  </div>
+
+  <script>
+
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    const gridSize = 20;
+    const gridCount = 40;
+
+    let gameState;
+    let mySnakeId = null;
+
+    const restartBtn = document.getElementById("restartBtn");
+
+    // 新增
+    const pauseBtn = document.getElementById("pauseBtn");
+    const speedControl = document.getElementById("speedControl");
+    const speedText = document.getElementById("speedText");
+
+    // 修复 websocket
+    const wsProtocol =
+      window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+
+    const ws =
+      new WebSocket(`${wsProtocol}//${window.location.host}`);
+
+    const nicknameInput =
+      document.getElementById("nickname");
+
+    const setNicknameBtn =
+      document.getElementById("setNicknameBtn");
+
+    setNicknameBtn.addEventListener("click", () => {
+
+      const nickname = nicknameInput.value.trim();
+
+      if (nickname && ws.readyState === WebSocket.OPEN) {
+
+        ws.send(JSON.stringify({
+          type: "setNickname",
+          nickname
+        }));
+
+        nicknameInput.value = "";
+      }
+    });
+
+    restartBtn.addEventListener("click", () => {
+
+      if (
+        ws.readyState === WebSocket.OPEN &&
+        mySnakeId
+      ) {
+
+        ws.send(JSON.stringify({
+          type: "restart"
+        }));
+      }
+    });
+
+    // 新增：暂停按钮
+    pauseBtn.addEventListener("click", () => {
+      togglePause();
+    });
+
+    // 新增：调速
+    speedControl.addEventListener("input", (e) => {
+
+      const level = parseInt(e.target.value);
+
+      changeSpeed(level);
+    });
+
+    // 键盘控制（修复网页滚动）
+    document.addEventListener("keydown", (e) => {
+
+      if (
+        ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "]
+          .includes(e.key)
+      ) {
+        e.preventDefault();
+      }
+
+      let dir;
+
+      if (e.key === "ArrowUp") dir = "up";
+      else if (e.key === "ArrowDown") dir = "down";
+      else if (e.key === "ArrowLeft") dir = "left";
+      else if (e.key === "ArrowRight") dir = "right";
+
+      if (dir) {
+        controlSnake(dir);
+      }
+
+      // 空格暂停
+      if (e.key === " ") {
+        togglePause();
+      }
+
+      // 数字键调速
+      if (["1","2","3","4","5"].includes(e.key)) {
+
+        const level = parseInt(e.key);
+
+        speedControl.value = level;
+
+        changeSpeed(level);
+      }
+    });
+
+    function controlSnake(dir) {
+
+      if (ws.readyState === WebSocket.OPEN) {
+
+        ws.send(JSON.stringify({
+          type: "control",
+          dir
+        }));
+      }
+    }
+
+    // 新增：暂停
+    function togglePause() {
+
+      if (ws.readyState === WebSocket.OPEN) {
+
+        ws.send(JSON.stringify({
+          type: "togglePause"
+        }));
+      }
+    }
+
+    // 新增：调速
+    function changeSpeed(level) {
+
+      speedText.textContent = `当前速度：${level}`;
+
+      if (ws.readyState === WebSocket.OPEN) {
+
+        ws.send(JSON.stringify({
+          type: "adjustSpeed",
+          speedLevel: level
+        }));
+      }
+    }
+
+    // 接收服务器消息
+    ws.onmessage = (evt) => {
+
+      try {
+
+        const data = JSON.parse(evt.data);
+
+        // 修复：正确获取自己的ID
+        if (data.type === "init") {
+          mySnakeId = data.myId;
+        }
+
+        if (data.type === "state") {
+
+          gameState = data.state;
+
+          drawGame();
+          updateScoreboard();
+          updateLeaderboard();
+          updateRestartBtnState();
+        }
+
+      } catch (e) {
+
+        console.log("接收消息失败：", e);
+
+      }
+    };
+
+    function drawGame() {
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // 网格
+      ctx.strokeStyle = 'rgba(0, 255, 204, 0.1)';
+      ctx.lineWidth = 1;
+
+      for (let i = 0; i <= gridCount; i++) {
+
+        ctx.beginPath();
+        ctx.moveTo(0, i * gridSize);
+        ctx.lineTo(canvas.width, i * gridSize);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(i * gridSize, 0);
+        ctx.lineTo(i * gridSize, canvas.height);
+        ctx.stroke();
+      }
+
+      // 食物
+      ctx.fillStyle = gameState.food.color;
+
+      ctx.beginPath();
+
+      ctx.roundRect(
+        gameState.food.x * gridSize + 2,
+        gameState.food.y * gridSize + 2,
+        gridSize - 4,
+        gridSize - 4,
+        4
+      );
+
+      ctx.fill();
+
+      // 蛇
+      for (let id in gameState.snakes) {
+
+        const snake = gameState.snakes[id];
+
+        ctx.fillStyle =
+          snake.isDead
+            ? 'rgba(255,68,68,0.5)'
+            : snake.color;
+
+        ctx.shadowColor =
+          snake.isDead
+            ? "#ff4444"
+            : snake.color;
+
+        ctx.shadowBlur = 8;
+
+        snake.body.forEach((segment, index) => {
+
+          ctx.beginPath();
+
+          const radius =
+            index === 0 ? 6 : 3;
+
+          ctx.roundRect(
+            segment.x * gridSize + 2,
+            segment.y * gridSize + 2,
+            gridSize - 4,
+            gridSize - 4,
+            radius
+          );
+
+          ctx.fill();
+        });
+      }
+
+      ctx.shadowBlur = 0;
+
+      // 新增：暂停遮罩
+      if (gameState.isPaused) {
+
+        ctx.fillStyle = "rgba(0,0,0,0.5)";
+
+        ctx.fillRect(
+          0,
+          0,
+          canvas.width,
+          canvas.height
+        );
+
+        ctx.fillStyle = "#ffffff";
+
+        ctx.font = "bold 48px Arial";
+
+        ctx.textAlign = "center";
+
+        ctx.fillText(
+          "游戏暂停",
+          canvas.width / 2,
+          canvas.height / 2
+        );
+      }
+    }
+
+    function updateScoreboard() {
+
+      const scoreboard =
+        document.getElementById("scoreboard");
+
+      scoreboard.innerHTML = "";
+
+      const snakes =
+        Object.values(gameState.snakes)
+          .sort((a, b) => b.score - a.score);
+
+      snakes.forEach(snake => {
+
+        const scoreItem =
+          document.createElement("div");
+
+        scoreItem.className = "score-item";
+
+        const colorDiv =
+          document.createElement("div");
+
+        colorDiv.className = "snake-color";
+
+        colorDiv.style.backgroundColor =
+          snake.isDead
+            ? 'rgba(255,68,68,0.5)'
+            : snake.color;
+
+        const nicknameDiv =
+          document.createElement("div");
+
+        nicknameDiv.className = "nickname";
+        nicknameDiv.textContent = snake.nickname;
+
+        const scoreDiv =
+          document.createElement("div");
+
+        scoreDiv.className = "score";
+        scoreDiv.textContent = snake.score;
+
+        scoreItem.appendChild(colorDiv);
+        scoreItem.appendChild(nicknameDiv);
+        scoreItem.appendChild(scoreDiv);
+
+        scoreboard.appendChild(scoreItem);
+      });
+    }
+
+    function updateLeaderboard() {
+
+      const leaderboard =
+        document.getElementById("leaderboard");
+
+      leaderboard.innerHTML = "";
+
+      if (gameState.leaderboard.length === 0) {
+
+        const emptyItem =
+          document.createElement("div");
+
+        emptyItem.className = "leaderboard-item";
+
+        emptyItem.textContent = "暂无历史分数记录";
+
+        leaderboard.appendChild(emptyItem);
+
+        return;
+      }
+
+      gameState.leaderboard.forEach((item, index) => {
+
+        const leaderboardItem =
+          document.createElement("div");
+
+        leaderboardItem.className =
+          "leaderboard-item";
+
+        const rankDiv =
+          document.createElement("div");
+
+        rankDiv.className = "rank";
+        rankDiv.textContent = index + 1;
+
+        const nicknameDiv =
+          document.createElement("div");
+
+        nicknameDiv.className = "nickname";
+        nicknameDiv.textContent = item.nickname;
+
+        const highScoreDiv =
+          document.createElement("div");
+
+        highScoreDiv.className = "high-score";
+        highScoreDiv.textContent = item.highScore;
+
+        leaderboardItem.appendChild(rankDiv);
+        leaderboardItem.appendChild(nicknameDiv);
+        leaderboardItem.appendChild(highScoreDiv);
+
+        leaderboard.appendChild(leaderboardItem);
+      });
+    }
+
+    function updateRestartBtnState() {
+
+      if (
+        !mySnakeId ||
+        !gameState.snakes[mySnakeId]
+      ) return;
+
+      const mySnake =
+        gameState.snakes[mySnakeId];
+
+      if (mySnake.isDead) {
+        restartBtn.classList.add("active");
+      } else {
+        restartBtn.classList.remove("active");
+      }
+    }
+
+    ws.onclose = () => {
+
+      alert(
+        "与服务器断开连接，请刷新页面重新加入！"
+      );
+    };
+
+    ws.onerror = (error) => {
+
+      console.error("WebSocket错误：", error);
+
+      alert(
+        "连接服务器失败，请检查网络或稍后再试！"
+      );
+    };
+
+  </script>
+
+</body>
+</html>
