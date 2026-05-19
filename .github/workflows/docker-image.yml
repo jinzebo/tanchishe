@@ -45,7 +45,7 @@ jobs:
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    # 6. 命令 Azure Container Apps (ACA) 容器应用拉取新镜像并完成滚动更新
+    # 6. 命令 Azure Container Apps (ACA) 容器应用拉取新镜像并完成滚动更新在 
     - name: Deploy to Azure Container Apps
       uses: azure/container-apps-deploy-action@v1
       with:
