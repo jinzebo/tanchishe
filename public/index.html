@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="ja">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Azure 多人联机贪吃蛇</title>
+  <title>Azure マルチプレイスネークゲーム</title>
 
   <style>
     * {
@@ -245,7 +245,7 @@
 <body>
 
   <h1 style="margin-bottom: 20px; color: #00ffcc; text-shadow: 0 0 10px rgba(0,255,204,0.5);">
-    Azure 多人联机贪吃蛇
+    Azure マルチスネークゲーム
   </h1>
 
   <div class="game-container">
@@ -255,18 +255,16 @@
     <div class="info-panel">
 
       <div class="nickname-input">
-        <input type="text" id="nickname" placeholder="输入你的昵称（8字内）">
-        <button id="setNicknameBtn">确认</button>
+        <input type="text" id="nickname" placeholder="ニックネーム（8文字以内）">
+        <button id="setNicknameBtn">確定</button>
       </div>
 
-      <button id="restartBtn">重新开始游戏</button>
+      <button id="restartBtn">ゲームを再開</button>
 
-      <!-- 新增：暂停按钮 -->
-      <button id="pauseBtn">暂停游戏</button>
+      <button id="pauseBtn">一時停止</button>
 
-      <!-- 优化：调速滑块，增加到10级 -->
       <div>
-        <div class="panel-title">蛇速调节 (1-10)</div>
+        <div class="panel-title">スピード調節 (1-10)</div>
 
         <input
           type="range"
@@ -281,22 +279,22 @@
           id="speedText"
           style="text-align:center;margin-top:8px;color:#ffd700;"
         >
-          当前速度：5 (正常)
+          現在のスピード：5 (通常)
         </div>
         
         <div style="text-align:center;font-size:12px;color:#888;margin-top:4px;">
-          1=极慢 5=正常 10=极快
+          1=極遅 5=通常 10=極速
         </div>
       </div>
 
       <div>
-        <div class="panel-title">实时计分板</div>
+        <div class="panel-title">リアルタイムスコア</div>
 
         <div class="scoreboard" id="scoreboard"></div>
       </div>
 
       <div>
-        <div class="panel-title">分数排行榜（历史最高）</div>
+        <div class="panel-title">ランキング（歴代最高）</div>
 
         <div class="leaderboard" id="leaderboard"></div>
       </div>
@@ -305,7 +303,7 @@
   </div>
 
   <div class="control-tip">
-    PC端：方向键移动 ｜ 空格暂停 ｜ 数字1~0调速 ｜ 死亡后点击重新开始
+    PC：矢印キーで移動 ｜ スペースキーで一時停止 ｜ 1〜0キーで速度変更 ｜ ゲームオーバー後は「ゲームを再開」をクリック
   </div>
 
   <div class="mobile-controls">
@@ -445,11 +443,11 @@
     // 新增：调速
     function changeSpeed(level) {
       const speedNames = {
-        1: "极慢", 2: "慢", 3: "较慢", 4: "稍慢", 5: "正常",
-        6: "稍快", 7: "快", 8: "很快", 9: "极快", 10: "超快"
+        1: "極遅", 2: "遅い", 3: "やや遅", 4: "少し遅", 5: "通常",
+        6: "少し速", 7: "速い", 8: "非常に速", 9: "極速", 10: "神速"
       };
       
-      speedText.textContent = `当前速度：${level} (${speedNames[level] || "正常"})`;
+      speedText.textContent = `現在のスピード：${level} (${speedNames[level] || "通常"})`;
 
       if (ws.readyState === WebSocket.OPEN) {
 
@@ -484,7 +482,7 @@
 
       } catch (e) {
 
-        console.log("接收消息失败：", e);
+        console.log("メッセージ受信失敗：", e);
 
       }
     };
@@ -597,7 +595,7 @@
         ctx.font = "bold 48px Arial";
         ctx.textAlign = "center";
         ctx.fillText(
-          "游戏暂停",
+          "一時停止中",
           canvas.width / 2,
           canvas.height / 2
         );
@@ -673,7 +671,7 @@
 
         emptyItem.className = "leaderboard-item";
 
-        emptyItem.textContent = "暂无历史分数记录";
+        emptyItem.textContent = "スコア記録がありません";
 
         leaderboard.appendChild(emptyItem);
 
@@ -734,16 +732,16 @@
     ws.onclose = () => {
 
       alert(
-        "与服务器断开连接，请刷新页面重新加入！"
+        "サーバーとの接続が切断されました。ページを更新して再接続してください。"
       );
     };
 
     ws.onerror = (error) => {
 
-      console.error("WebSocket错误：", error);
+      console.error("WebSocketエラー：", error);
 
       alert(
-        "连接服务器失败，请检查网络或稍后再试！"
+        "サーバーへの接続に失敗しました。ネットワークを確認してもう一度お試しください。"
       );
     };
 
