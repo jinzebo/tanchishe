@@ -264,16 +264,16 @@
       <!-- 新增：暂停按钮 -->
       <button id="pauseBtn">暂停游戏</button>
 
-      <!-- 新增：调速 -->
+      <!-- 优化：调速滑块，增加到10级 -->
       <div>
-        <div class="panel-title">蛇速调节</div>
+        <div class="panel-title">蛇速调节 (1-10)</div>
 
         <input
           type="range"
           id="speedControl"
           min="1"
-          max="5"
-          value="2"
+          max="10"
+          value="5"
           style="width:100%;"
         >
 
@@ -281,7 +281,11 @@
           id="speedText"
           style="text-align:center;margin-top:8px;color:#ffd700;"
         >
-          当前速度：2
+          当前速度：5 (正常)
+        </div>
+        
+        <div style="text-align:center;font-size:12px;color:#888;margin-top:4px;">
+          1=极慢 5=正常 10=极快
         </div>
       </div>
 
@@ -301,7 +305,7 @@
   </div>
 
   <div class="control-tip">
-    PC端：方向键移动 ｜ 空格暂停 ｜ 数字1~5调速 ｜ 死亡后点击重新开始
+    PC端：方向键移动 ｜ 空格暂停 ｜ 数字1~0调速 ｜ 死亡后点击重新开始
   </div>
 
   <div class="mobile-controls">
@@ -316,8 +320,8 @@
     const canvas = document.getElementById("game");
     const ctx = canvas.getContext("2d");
 
-    const gridSize = 20;
-    const gridCount = 40;
+    const GRID_COUNT = 60; // ✅ 与服务端保持一致
+    const gridSize = canvas.width / GRID_COUNT; // ✅ 动态计算格子大小
 
     let gameState;
     let mySnakeId = null;
@@ -379,7 +383,6 @@
     speedControl.addEventListener("input", (e) => {
 
       const level = parseInt(e.target.value);
-
       changeSpeed(level);
     });
 
@@ -409,13 +412,10 @@
         togglePause();
       }
 
-      // 数字键调速
-      if (["1","2","3","4","5"].includes(e.key)) {
-
-        const level = parseInt(e.key);
-
+      // 数字键调速 (1-0 对应 1-10)
+      if (["1","2","3","4","5","6","7","8","9","0"].includes(e.key)) {
+        const level = e.key === "0" ? 10 : parseInt(e.key);
         speedControl.value = level;
-
         changeSpeed(level);
       }
     });
@@ -444,8 +444,12 @@
 
     // 新增：调速
     function changeSpeed(level) {
-
-      speedText.textContent = `当前速度：${level}`;
+      const speedNames = {
+        1: "极慢", 2: "慢", 3: "较慢", 4: "稍慢", 5: "正常",
+        6: "稍快", 7: "快", 8: "很快", 9: "极快", 10: "超快"
+      };
+      
+      speedText.textContent = `当前速度：${level} (${speedNames[level] || "正常"})`;
 
       if (ws.readyState === WebSocket.OPEN) {
 
@@ -490,10 +494,10 @@
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       // 网格
-      ctx.strokeStyle = 'rgba(0, 255, 204, 0.1)';
+      ctx.strokeStyle = 'rgba(0, 255, 204, 0.08)'; // ✅ 透明度降低，更清晰
       ctx.lineWidth = 1;
 
-      for (let i = 0; i <= gridCount; i++) {
+      for (let i = 0; i <= GRID_COUNT; i++) {
 
         ctx.beginPath();
         ctx.moveTo(0, i * gridSize);
@@ -506,20 +510,33 @@
         ctx.stroke();
       }
 
-      // 食物
-      ctx.fillStyle = gameState.food.color;
-
-      ctx.beginPath();
-
-      ctx.roundRect(
-        gameState.food.x * gridSize + 2,
-        gameState.food.y * gridSize + 2,
-        gridSize - 4,
-        gridSize - 4,
-        4
-      );
-
-      ctx.fill();
+      // ✅ 食物（多个）
+      if (Array.isArray(gameState.food)) {
+        gameState.food.forEach(food => {
+          ctx.fillStyle = food.color;
+          ctx.beginPath();
+          ctx.roundRect(
+            food.x * gridSize + 2,
+            food.y * gridSize + 2,
+            gridSize - 4,
+            gridSize - 4,
+            4
+          );
+          ctx.fill();
+        });
+      } else if (gameState.food) {
+        // 兼容单个食物的情况
+        ctx.fillStyle = gameState.food.color;
+        ctx.beginPath();
+        ctx.roundRect(
+          gameState.food.x * gridSize + 2,
+          gameState.food.y * gridSize + 2,
+          gridSize - 4,
+          gridSize - 4,
+          4
+        );
+        ctx.fill();
+      }
 
       // 蛇
       for (let id in gameState.snakes) {
@@ -559,6 +576,11 @@
 
       ctx.shadowBlur = 0;
 
+      // 新增：地图边界
+      ctx.strokeStyle = "#00ffcc";
+      ctx.lineWidth = 3;
+      ctx.strokeRect(0, 0, canvas.width, canvas.height);
+
       // 新增：暂停遮罩
       if (gameState.isPaused) {
 
@@ -572,11 +594,8 @@
         );
 
         ctx.fillStyle = "#ffffff";
-
         ctx.font = "bold 48px Arial";
-
         ctx.textAlign = "center";
-
         ctx.fillText(
           "游戏暂停",
           canvas.width / 2,
@@ -625,9 +644,16 @@
         scoreDiv.className = "score";
         scoreDiv.textContent = snake.score;
 
+        // 显示当前速度级别
+        const speedDiv = document.createElement("div");
+        speedDiv.className = "dead-tag";
+        speedDiv.textContent = `Lv.${snake.speedLevel || 5}`;
+        speedDiv.style.color = snake.isDead ? "#ff4444" : "#00ffcc";
+
         scoreItem.appendChild(colorDiv);
         scoreItem.appendChild(nicknameDiv);
         scoreItem.appendChild(scoreDiv);
+        scoreItem.appendChild(speedDiv);
 
         scoreboard.appendChild(scoreItem);
       });
